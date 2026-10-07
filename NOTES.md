@@ -6,3 +6,6 @@
 4. The bot may stay in place.
 5. The bot knows `q`.
 6. If one fire step burns both the bot's cell and the button, the outcome is `BURNED`.
+7. When a bot has no path to the button, it gives up (`GAVE_UP`). Fire never goes out, so once every route is blocked, none will open again.
+8. Bot 3's buffer applies to the button too. If the button is next to the fire, Bot 3 falls back to Bot 2's plan.
+9. BFS checks neighbors in a fixed order (up, down, left, right), so ties between equal-length paths are broken the same way for every bot.
