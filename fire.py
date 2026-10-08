@@ -29,11 +29,12 @@ class Fire:
         self.burning: set[Cell] = set()
         self.ignition_time: dict[Cell, int] = {}
         self.frontier: dict[Cell, int] = {}
-        # A cell has at most 4 neighbors, so precompute 1 - (1 - q)^K for K = 0..4.
+        # K can only be 0-4 so just precompute 1 - (1 - q)^K for each
         self._ignite_prob = [1.0 - (1.0 - q) ** k for k in range(5)]
         self._ignite(start)
 
     def _ignite(self, cell: Cell) -> None:
+        # update the frontier here so step() never has to scan the whole grid
         self.burning.add(cell)
         self.ignition_time[cell] = self.t
         self.frontier.pop(cell, None)
@@ -44,17 +45,16 @@ class Fire:
     def step(self) -> set[Cell]:
         """Advance the fire one step. Returns the cells that ignited this step."""
         self.t += 1
-        # Phase 1: decide every ignition from the frontier as it was before this
-        # step. Nothing is changed yet, so a cell that ignites now cannot raise
-        # another cell's K until the next step.
-        # Sorted order, and one random draw per frontier cell even when q is 0
-        # or 1, so the random stream (and so the whole fire) depends only on
-        # (ship, start, q, seed), never on dict ordering.
+        # first decide who catches fire using the state from BEFORE this step.
+        # dont change anything yet, otherwise a cell that just caught fire would
+        # count toward its neighbors K in the same step (not synchronous)
+        # sorted + one random() per cell every time so the same seed always
+        # gives the exact same fire no matter what the bot does
         newly_ignited = []
         for cell in sorted(self.frontier):
             if self.rng.random() < self._ignite_prob[self.frontier[cell]]:
                 newly_ignited.append(cell)
-        # Phase 2: apply them all together.
+        # now actually light them all at once
         for cell in newly_ignited:
             self._ignite(cell)
         return set(newly_ignited)

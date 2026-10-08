@@ -12,12 +12,13 @@ def bfs_path(ship: Ship, start: Cell, goal: Cell, avoid: set[Cell]) -> list[Cell
     Returns the path as [start, ..., goal], or None if no such path exists.
     The start cell is allowed even if it is in avoid (the bot is already there).
     """
-    parent = {start: None}  # also serves as the visited set
+    parent = {start: None}  # doubles as the visited set
+    # BFS since every move costs the same, so first time we hit the goal is a shortest path
     queue = deque([start])
     while queue:
         cell = queue.popleft()
         if cell == goal:
-            # Walk the parent links back to the start, then flip the order.
+            # follow parents back to the start then reverse it
             path = []
             while cell is not None:
                 path.append(cell)

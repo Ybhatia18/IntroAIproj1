@@ -50,7 +50,7 @@ class RandomPickSet:
             return
         i = self.index.pop(cell)
         last = self.items.pop()
-        # If the removed cell was not the last one, the last cell fills its slot.
+        # move the last cell into the hole so we dont have to shift the whole list
         if i < len(self.items):
             self.items[i] = last
             self.index[last] = i
@@ -88,8 +88,8 @@ class Ship:
         self.open_cells: list[Cell] = [
             (int(r), int(c)) for r, c in zip(*np.nonzero(grid))
         ]
-        # The layout never changes, and bots/fire ask for neighbors constantly,
-        # so compute them once here.
+        # ship never changes after this and everything asks for neighbors a lot,
+        # so just compute them once
         self.neighbors: dict[Cell, tuple[Cell, ...]] = {}
         for cell in self.open_cells:
             self.neighbors[cell] = tuple(
@@ -116,7 +116,7 @@ def _grow_maze(D: int, rng: random.Random) -> tuple[np.ndarray, np.ndarray]:
     """
     is_open = np.zeros((D, D), dtype=bool)
     count = np.zeros((D, D), dtype=np.int8)
-    # Candidates: blocked cells with exactly one open neighbor.
+    # candidates = blocked cells with exactly one open neighbor
     candidates = RandomPickSet()
 
     def open_cell(x: Cell) -> None:
@@ -126,9 +126,9 @@ def _grow_maze(D: int, rng: random.Random) -> tuple[np.ndarray, np.ndarray]:
             count[y] += 1
             if is_open[y]:
                 continue
-            # y just gained an open neighbor. At 1 it becomes a candidate; at 2
-            # it stops being one (opening it would now create a loop). Above 2
-            # it was already excluded, so nothing changes.
+            # y just got another open neighbor. if its count is 1 now its a
+            # candidate, if its 2 it isnt anymore (opening it would make a loop).
+            # 3+ was already out so nothing to do
             if count[y] == 1:
                 candidates.add(y)
             elif count[y] == 2:
@@ -151,7 +151,7 @@ def _reduce_dead_ends(
     """
     D = is_open.shape[0]
 
-    # Step 4 is the only full scan; after this the dead-end set is kept up to date.
+    # only full scan of the grid. after this we just update the set as we go
     dead_ends = RandomPickSet()
     for r in range(D):
         for c in range(D):
@@ -159,21 +159,21 @@ def _reduce_dead_ends(
                 dead_ends.add((r, c))
     n0 = len(dead_ends)
 
-    # "Cut by at least half": stop once current <= N0 / 2, done in integers.
+    # "cut by at least half" -> stop when current <= N0 / 2 (multiplied out to avoid floats)
     while 2 * len(dead_ends) > n0:
         d = dead_ends.pick(rng)
-        # A dead end has exactly one open neighbor and at least two in-grid
-        # neighbors (even in a corner), so this list is never empty.
+        # a dead end has 1 open neighbor but at least 2 neighbors in the grid
+        # (even in a corner) so theres always a blocked one to pick
         blocked = [y for y in grid_neighbors(D, d) if not is_open[y]]
         y = blocked[rng.randrange(len(blocked))]
 
         is_open[y] = True
-        # y is adjacent to d, so it has at least one open neighbor. If d is its
-        # only one, y is now a dead end itself (the dead end moved forward).
+        # y is next to d so it has at least 1 open neighbor. if d is the only one
+        # then y is a new dead end (the dead end basically just moved over)
         if count[y] == 1:
             dead_ends.add(y)
-        # Every open neighbor of y gains an open neighbor. d is one of them, but
-        # y can touch other dead ends too, and all of them stop being dead ends.
+        # all of y's open neighbors gain a neighbor. d is one of them but y can
+        # touch other dead ends too, so check all of them not just d
         for z in grid_neighbors(D, y):
             count[z] += 1
             if is_open[z]:

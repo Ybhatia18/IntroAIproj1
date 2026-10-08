@@ -10,8 +10,9 @@ class Bot2:
         pass
 
     def next_move(self, state: SimState) -> Cell | None:
+        # replan every step around whatever is burning right now
         path = bfs_path(state.ship, state.bot, state.button, avoid=state.burning)
         if path is None:
-            # The fire only grows, so once it cuts off the button it stays cut off.
+            # fire never goes out so if theres no path now there never will be
             return None
-        return path[1]
+        return path[1]  # path[0] is where we already are

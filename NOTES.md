@@ -9,3 +9,5 @@
 7. When a bot has no path to the button, it gives up (`GAVE_UP`). Fire never goes out, so once every route is blocked, none will open again.
 8. Bot 3's buffer applies to the button too. If the button is next to the fire, Bot 3 falls back to Bot 2's plan.
 9. BFS checks neighbors in a fixed order (up, down, left, right), so ties between equal-length paths are broken the same way for every bot.
+10. Bot 4's risk model treats neighbors as "maybe burning": a cell catches with chance 1 - prod(1 - q * p_neighbor). That's exactly 1 - (1 - q)^K for the first step, but it ignores correlations between cells after that.
+11. Bot 4's FE!N Mode is permanent: once it decides to run, it doesn't go back to careful routing.

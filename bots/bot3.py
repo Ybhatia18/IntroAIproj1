@@ -11,13 +11,16 @@ class Bot3:
         pass
 
     def next_move(self, state: SimState) -> Cell | None:
+        # fire cells + every cell touching one
         near_fire = set(state.burning)
         for cell in state.burning:
             near_fire.update(state.ship.neighbors[cell])
 
+        # try to keep a 1 cell gap from the fire first
         path = bfs_path(state.ship, state.bot, state.button, avoid=near_fire)
         if path is None:
+            # no safe path so fall back to just avoiding the fire (same as bot 2)
             path = bfs_path(state.ship, state.bot, state.button, avoid=state.burning)
         if path is None:
-            return None
+            return None  # totally cut off
         return path[1]

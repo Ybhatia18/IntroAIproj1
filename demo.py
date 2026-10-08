@@ -25,6 +25,7 @@ def main() -> None:
     print(f"open fraction: {len(ship.open_cells) / ship.D**2:.1%}")
     print(f"dead ends: {ship.initial_dead_ends} before step 5, {ship.final_dead_ends} after")
 
+    # same seed for placement + fire so the demo is the same every run
     rng = random.Random(args.seed)
     bot, button, fire_start = place_entities(ship, rng)
     fire = Fire(ship, fire_start, args.q, rng)

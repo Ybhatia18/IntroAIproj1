@@ -38,8 +38,8 @@ class SimState:
     burning: set[Cell]
     q: float
     t: int
-    # The real fire. Private: bots must use fork_fire, never touch this, since
-    # its random generator would reveal the future.
+    # the real fire. bots shouldnt touch this, use fork_fire instead, since
+    # the real rng would basically let a bot see the future
     _fire: Fire = field(repr=False, compare=False)
 
     def fork_fire(self, rng: random.Random) -> Fire:
@@ -93,8 +93,8 @@ def run_trial(
         ValueError: if the bot returns an illegal move.
     """
     if max_steps is None:
-        # Generous enough that any sensible path finishes, but a bot that stands
-        # still at q = 0 still terminates.
+        # big enough for any real path, but makes sure a bot that just sits
+        # there at q = 0 doesnt run forever
         max_steps = 4 * ship.D * ship.D
 
     fire = Fire(ship, fire_start, q, random.Random(fire_seed))
@@ -109,31 +109,32 @@ def run_trial(
     bot.start(state)
 
     while state.t < max_steps:
-        # 1. The bot chooses.
+        # 1. bot picks a move
         move = bot.next_move(state)
         if move is None:
             return finish(Outcome.GAVE_UP)
+        # only allowed to stay or move to an open neighbor, anything else is a bug
         if move != state.bot and move not in ship.neighbors[state.bot]:
             raise ValueError(
                 f"illegal move from {state.bot} to {move} at t={state.t + 1}"
             )
 
-        # 2. The bot moves. The timestep is now under way.
+        # 2. bot moves (and dies if it walked into fire)
         state.t += 1
         state.bot = move
         bot_path.append(move)
         if move in fire.burning:
             return finish(Outcome.BURNED)
 
-        # 3. Button check comes before the fire advances.
+        # 3. button check has to happen BEFORE the fire spreads
         if move == button:
             return finish(Outcome.SUCCESS)
 
-        # 4. The fire advances.
+        # 4. fire spreads
         fire.step()
 
-        # 5. Did the fire reach the bot? Checked before the button so that a
-        # step that burns both counts as the bot burning.
+        # 5. did the fire get the bot? check this before the button so if both
+        # burn on the same step it counts as the bot burning
         if state.bot in fire.burning:
             return finish(Outcome.BURNED)
         if button in fire.burning:
