@@ -70,6 +70,7 @@ class Fire:
         copy.q = self.q
         copy.rng = rng
         copy.t = self.t
+        # copy the sets/dicts (not just point to them) so the clone and the real fire dont share state
         copy.burning = set(self.burning)
         copy.ignition_time = dict(self.ignition_time)
         copy.frontier = dict(self.frontier)

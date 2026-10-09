@@ -17,7 +17,8 @@ def test_q0_never_spreads():
 
 
 def test_q1_burns_exactly_distance_t():
-    # A non-synchronous update would spread more than one cell per step.
+    # at q = 1 everything next to fire catches, so after t steps it should be exactly
+    # everything within distance t. if the update wasnt synchronous it would go further
     start = SHIP.open_cells[100]
     dist = distances_from(SHIP, start)
     fire = Fire(SHIP, start, 1.0, random.Random(0))
@@ -37,8 +38,8 @@ def test_never_burns_blocked_and_only_grows():
 
 
 def test_ignition_rate_matches_formula():
-    # S starts burning. A and B touch S; T touches A and B but not S. After
-    # step 1, T has K = 0, 1 or 2 burning neighbors; check its step-2 rate.
+    # S starts burning. A and B touch S, T touches A and B but not S. after step 1
+    # T has 0, 1 or 2 burning neighbors, so we can check how often it catches in step 2
     ship = ship_from_ascii("""
         ####
         #..#
@@ -57,6 +58,7 @@ def test_ignition_rate_matches_formula():
         if k:
             counts[k][0] += T in fire.burning
             counts[k][1] += 1
+    # 0.04 is loose enough that random noise wont fail the test
     for k, (hits, n) in counts.items():
         assert abs(hits / n - (1 - (1 - q) ** k)) < 0.04
 
@@ -68,7 +70,7 @@ def test_same_seed_same_fire_and_matches_run_trial():
         seed = rng.randrange(10**6)
         timeline = fire_timeline(SHIP, fire_start, 0.3, seed, max_steps=10**6)
         assert timeline == fire_timeline(SHIP, fire_start, 0.3, seed, max_steps=10**6)
-        # A standing bot only ends after the fire moves, so steps = fire steps.
+        # a bot that stands still can only lose after the fire moves, so steps = fire steps here
         result = run_trial(SHIP, StandStill(), bot, button, fire_start, 0.3, seed)
         assert result.ignition_time == {c: t for c, t in timeline.items() if t <= result.steps}
 

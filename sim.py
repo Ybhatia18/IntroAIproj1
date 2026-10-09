@@ -70,6 +70,7 @@ def place_entities(ship: Ship, rng: random.Random) -> tuple[Cell, Cell, Cell]:
 
     Returns (bot_start, button, fire_start).
     """
+    # sample picks 3 different cells, so they can never overlap
     bot_start, button, fire_start = rng.sample(ship.open_cells, 3)
     return bot_start, button, fire_start
 
@@ -103,6 +104,7 @@ def run_trial(
     )
     bot_path = [bot_start]
 
+    # every way the trial can end goes through here so the result is built the same way
     def finish(outcome: Outcome) -> TrialResult:
         return TrialResult(outcome, state.t, bot_path, dict(fire.ignition_time))
 

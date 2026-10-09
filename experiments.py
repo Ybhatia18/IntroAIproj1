@@ -35,6 +35,7 @@ def make_trial(D: int, base_seed: int, trial: int):
     Only depends on the trial number (not q), so trial 7 is the same ship and
     starting spots at every q. That way the curves are compared on the same setups.
     """
+    # seed only depends on the trial number so its the same setup for every q and every bot
     rng = random.Random(base_seed * 1_000_003 + trial)
     ship = generate_ship(D, seed=rng.randrange(2**32))
     bot_start, button, fire_start = place_entities(ship, rng)
@@ -43,6 +44,7 @@ def make_trial(D: int, base_seed: int, trial: int):
 
 
 def path_length(ship, start, goal):
+    # plain distance ignoring fire, just to see who started closer to the button
     path = bfs_path(ship, start, goal, avoid=set())
     return len(path) - 1
 
@@ -52,7 +54,7 @@ def run_job(job: dict) -> list[dict]:
     ship, bot_start, button, fire_start, fire_seed = make_trial(job["D"], job["base_seed"], job["trial"])
     rows = []
     for name, make_bot in job["bots"]:
-        bot = make_bot()
+        bot = make_bot()  # fresh bot every run so nothing carries over
         result = run_trial(ship, bot, bot_start, button, fire_start, job["q"], fire_seed)
         rows.append({
             "q": job["q"],
@@ -81,6 +83,7 @@ class MakeBot4:
 
 
 def q_values(start: float, stop: float, step: float) -> list[float]:
+    # count steps with round() instead of adding 0.05 over and over, floats would drift (0.30000000004 etc)
     count = round((stop - start) / step)
     return [round(start + i * step, 4) for i in range(count + 1)]
 
@@ -90,7 +93,9 @@ def run_jobs(jobs: list[dict], out: str, workers: int) -> None:
     with open(out, "w", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=FIELDS)
         writer.writeheader()
+        # run setups on all cores at once, otherwise the dense sweep takes forever
         with Pool(workers) as pool:
+            # unordered is fine since every row says which q/trial it came from
             for i, rows in enumerate(pool.imap_unordered(run_job, jobs, chunksize=4), start=1):
                 writer.writerows(rows)
                 if i % 200 == 0 or i == len(jobs):
@@ -125,8 +130,10 @@ def main() -> None:
         if not args.param or not args.values:
             parser.error("tune needs --param and --values")
         for value in args.values:
+            # horizon is a number of steps so it has to be an int
             if args.param == "horizon":
                 value = int(value)
+            # defaults for everything except the one setting we're testing
             config = replace(Bot4Config(), **{args.param: value})
             bots = [("bot4", MakeBot4(config))]
             for q in qs:

@@ -6,7 +6,7 @@ from helpers import RandomWalker, Scripted, StandStill, ship_from_ascii
 from ship import generate_ship
 from sim import Outcome, place_entities, run_trial
 
-# One open corridor along row 2: (2, 0) .. (2, 4).
+# just one open hallway along row 2, (2, 0) to (2, 4)
 CORRIDOR = ship_from_ascii("""
     #####
     #####
@@ -26,7 +26,8 @@ def test_placement_gives_three_distinct_open_cells():
 
 
 def test_reaching_button_as_fire_would_reach_it_succeeds():
-    # At q = 1 the fire would reach the button (2, 2) at t = 1, the same step the bot does.
+    # at q = 1 the fire hits the button (2, 2) at t = 1, same step the bot gets there.
+    # button check comes first so the bot should win
     result = run_trial(CORRIDOR, Scripted([(2, 2)]), (2, 1), (2, 2), (2, 3), 1.0, fire_seed=0)
     assert result.outcome is Outcome.SUCCESS
 
@@ -42,7 +43,7 @@ def test_bot_stepping_into_fire_burns():
 
 
 def test_illegal_move_raises():
-    # Two steps away, blocked, and diagonal.
+    # 2 cells away, a wall, and diagonal. all should be rejected
     for move in [(2, 2), (1, 0), (3, 1)]:
         with pytest.raises(ValueError):
             run_trial(CORRIDOR, Scripted([move]), (2, 0), (2, 4), (2, 3), 0.0, fire_seed=0)
@@ -57,8 +58,8 @@ def test_different_bots_see_the_same_fire():
         a = run_trial(ship, StandStill(), bot_start, button, fire_start, 0.25, fire_seed)
         b = run_trial(ship, RandomWalker(random.Random(trial)), bot_start, button,
                       fire_start, 0.25, fire_seed)
-        # A trial can end before the fire moves on its last timestep, so only
-        # compare fire steps that both trials certainly ran.
+        # a trial can end before the fire moves on its last step, so only compare
+        # the fire steps both of them definitely ran
         horizon = min(a.steps, b.steps) - 1
         assert ({c: t for c, t in a.ignition_time.items() if t <= horizon}
                 == {c: t for c, t in b.ignition_time.items() if t <= horizon})

@@ -27,8 +27,8 @@ from render import BLOCKED_COLOR, BOT_COLOR, BUTTON_COLOR, save_image
 from ship import generate_ship
 from sim import place_entities, run_trial
 
-# colorblind-checked palette, always in this order. lines also get different
-# marker shapes so they still work printed in black and white
+# colors i checked are colorblind safe, always used in this order. each line also gets
+# its own marker shape so it still works if someone prints it in black and white
 SERIES_COLORS = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100"]
 MARKERS = ["o", "s", "^", "D"]
 BOT_LABELS = {"bot1": "Bot 1", "bot2": "Bot 2", "bot3": "Bot 3", "bot4": "Bot 4"}
@@ -49,7 +49,7 @@ def new_figure(width=7.0, height=4.2, ncols=1, nrows=1, sharey=False):
     fig = Figure(figsize=(width, height), dpi=200, layout="constrained")
     axes = fig.subplots(nrows, ncols, sharey=sharey, squeeze=False)
     for ax in axes.flat:
-        # keep the grid and axes quiet so the data stands out
+        # light grid and gray axes so the lines are what you notice
         ax.grid(color=GRID, linewidth=0.6)
         ax.set_axisbelow(True)
         for side in ("top", "right"):
@@ -77,7 +77,7 @@ def plot_lines(ax, rates: dict, series: list[str], labels: dict):
         qs = sorted(q for (name, q) in rates if name == s)
         p = np.array([rates[(s, q)][0] for q in qs])
         n = np.array([rates[(s, q)][1] for q in qs])
-        # 95% confidence band (normal approximation)
+        # 95% confidence band, normal approximation: 1.96 * sqrt(p(1-p)/n)
         err = 1.96 * np.sqrt(p * (1 - p) / n)
         color = SERIES_COLORS[i]
         ax.fill_between(qs, p - err, p + err, color=color, alpha=0.12, linewidth=0)
@@ -121,7 +121,7 @@ def cmd_outcomes(args):
     for ax in axes[:, 0]:
         ax.set_ylabel("fraction of trials")
     fig.suptitle(args.title or "How each trial ends", fontsize=11, color=TEXT)
-    # one shared legend on top instead of covering a panel
+    # one legend for all 4 panels instead of covering one of them
     fig.legend(*axes[0, 0].get_legend_handles_labels(), loc="outside lower center",
                ncol=len(OUTCOMES), frameon=False, fontsize=8, labelcolor=TEXT)
     save(fig, args.out)
@@ -133,6 +133,7 @@ def cmd_head2head(args):
     for r in rows:
         won[(float(r["q"]), r["trial"], r["bot"])] = r["outcome"] == "SUCCESS"
     only = defaultdict(lambda: [0, 0, 0])  # q -> [only bot4, only bot3, total]
+    # same q + same trial = same ship and fire, so this is a fair 1 on 1 comparison
     for (q, trial, bot), ok in won.items():
         if bot != "bot4":
             continue
@@ -143,6 +144,7 @@ def cmd_head2head(args):
     qs = sorted(only)
     fig, axes = new_figure()
     ax = axes[0, 0]
+    # two bars per q so each one gets a bit under half the gap
     width = (qs[1] - qs[0]) * 0.38 if len(qs) > 1 else 0.02
     a = [100 * only[q][0] / only[q][2] for q in qs]
     b = [100 * only[q][1] / only[q][2] for q in qs]
@@ -161,6 +163,7 @@ def cmd_tuning(args):
     param = rows[0]["param"]
     rates = success_rates(rows, "value")
     values = sorted({r["value"] for r in rows}, key=float)
+    # only have 4 colors that are safe together, so cap it at 4 values
     if len(values) > len(SERIES_COLORS):
         raise SystemExit(f"plot at most {len(SERIES_COLORS)} values at once so the colors stay distinct")
     fig, axes = new_figure()
@@ -174,7 +177,7 @@ def cmd_tuning(args):
 
 
 def cmd_riskmap(args):
-    # pick a ship + fire, let the real fire burn a bit, then show what Bot 4 predicts
+    # make a ship, let the fire burn for a bit so theres something to predict from, then show bot 4's guess
     ship = generate_ship(args.D, seed=args.seed)
     bot, button, fire_start = place_entities(ship, random.Random(args.seed))
     fire = Fire(ship, fire_start, args.q, random.Random(args.seed))
@@ -189,6 +192,7 @@ def cmd_riskmap(args):
         grid = np.full((ship.D, ship.D), np.nan)
         for cell in ship.open_cells:
             grid[cell] = risk[s].get(cell, 0.0)
+        # draw the walls first, then the risk on top (nan = transparent)
         ax.imshow(np.where(ship.open, np.nan, 1.0), cmap=LinearSegmentedColormap.from_list(
             "walls", [BLOCKED_COLOR, BLOCKED_COLOR]), interpolation="nearest")
         image = ax.imshow(grid, cmap=cmap, vmin=0, vmax=1, interpolation="nearest")
@@ -211,7 +215,7 @@ def cmd_riskmap(args):
 
 
 def cmd_examples(args):
-    # find trials where one bot failed and another made it, then draw them
+    # find setups where one bot failed and the other made it, then redraw both so we can compare
     rows = load(args.csv)
     by_setup = defaultdict(dict)
     for r in rows:
@@ -230,8 +234,10 @@ def cmd_examples(args):
         if not matches:
             print(f"no example for: {caption}")
             continue
+        # sorted + seeded rng so we get the same example every time we run this
         q, trial = rng.choice(sorted(matches))
         ship, bot_start, button, fire_start, fire_seed = make_trial(args.D, args.seed, trial)
+        # rerun the trial since the csv only has outcomes, not the paths
         for name in (loser, winner):
             result = run_trial(ship, BOTS[name](), bot_start, button, fire_start, q, fire_seed)
             title = f"{BOT_LABELS[name]}: {result.outcome.name.lower()} at t={result.steps} (q={q}, trial {trial})"
@@ -242,6 +248,7 @@ def cmd_examples(args):
 
 def save(fig, out):
     os.makedirs(os.path.dirname(out) or ".", exist_ok=True)
+    # white background so it looks right pasted into the pdf
     fig.savefig(out, bbox_inches="tight", facecolor="white")
     print(f"saved {out}")
 

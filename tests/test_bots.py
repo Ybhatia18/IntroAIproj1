@@ -8,8 +8,8 @@ from helpers import distances_from, ship_from_ascii
 from ship import generate_ship
 from sim import Outcome, place_entities, run_trial
 
-# Two routes from the left side to the right side of the ship: a short top
-# corridor (row 1) and a longer bottom loop (rows 1-5).
+# two ways from left to right: short hallway on top (row 1) or the long way
+# around the bottom (rows 1-5)
 TWO_ROUTES = ship_from_ascii("""
     #######
     .......
@@ -35,7 +35,7 @@ def test_bfs_finds_shortest_path_and_respects_avoid():
 
 
 def test_all_bots_take_the_short_route_when_fire_is_away():
-    # Fire at (5, 3) is on the long loop and never spreads (q = 0).
+    # fire at (5, 3) is on the long way and never spreads (q = 0), so short way is fine
     for bot in (Bot1(), Bot2(), Bot3()):
         result = run_trial(TWO_ROUTES, bot, (1, 0), (1, 6), (5, 3), 0.0, fire_seed=0)
         assert result.outcome is Outcome.SUCCESS
@@ -54,8 +54,8 @@ def test_bot1_follows_its_first_plan_no_matter_what():
 
 
 def test_bot3_keeps_a_buffer_when_it_can():
-    # Fire at (1, 3) on the short corridor. Bot 3 must not step next to it if
-    # the long loop exists; with q = 0 it should take the loop and succeed.
+    # fire at (1, 3) blocks the short hallway. bot 3 shouldnt go next to it since
+    # the long way exists, and with q = 0 it should make it
     result = run_trial(TWO_ROUTES, Bot3(), (1, 0), (1, 6), (1, 3), 0.0, fire_seed=0)
     assert result.outcome is Outcome.SUCCESS
     near_fire = {(1, 2), (1, 4)}

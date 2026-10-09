@@ -134,6 +134,7 @@ def _grow_maze(D: int, rng: random.Random) -> tuple[np.ndarray, np.ndarray]:
             elif count[y] == 2:
                 candidates.remove(y)
 
+    # 1 to D-2 so the first cell is never on the border (randint includes both ends)
     start = (rng.randint(1, D - 2), rng.randint(1, D - 2))
     open_cell(start)
     while len(candidates) > 0:
