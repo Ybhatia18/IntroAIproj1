@@ -68,17 +68,17 @@ All results are reproducible: trial `i` is the same ship, placement and fire at 
 # data
 python experiments.py sweep --trials 200 --out results/coarse.csv
 python experiments.py sweep --q-start 0.04 --q-stop 0.66 --q-step 0.02 --trials 1000 --out results/dense.csv
-python experiments.py tune --param risk_weight --values 5 15 30 60 --q-start 0.1 --q-stop 0.6 --q-step 0.1 --trials 500 --out results/tune_risk_weight.csv
-python experiments.py tune --param horizon --values 5 10 20 40 --q-start 0.1 --q-stop 0.6 --q-step 0.1 --trials 500 --out results/tune_horizon.csv
-python experiments.py tune --param fein_margin --values 0 0.02 0.05 0.1 --q-start 0.1 --q-stop 0.6 --q-step 0.1 --trials 500 --out results/tune_fein_margin.csv
-python experiments.py tune --param max_detour_ratio --values 1.5 2 3 5 --q-start 0.1 --q-stop 0.6 --q-step 0.1 --trials 500 --out results/tune_max_detour_ratio.csv
+python experiments.py tune --param risk_weight --values 5 15 30 60 --q-start 0.1 --q-stop 0.6 --q-step 0.1 --trials 500 --out tuning/results/tune_risk_weight.csv
+python experiments.py tune --param horizon --values 5 10 20 40 --q-start 0.1 --q-stop 0.6 --q-step 0.1 --trials 500 --out tuning/results/tune_horizon.csv
+python experiments.py tune --param fein_margin --values 0 0.02 0.05 0.1 --q-start 0.1 --q-stop 0.6 --q-step 0.1 --trials 500 --out tuning/results/tune_fein_margin.csv
+python experiments.py tune --param max_detour_ratio --values 1.5 2 3 5 --q-start 0.1 --q-stop 0.6 --q-step 0.1 --trials 500 --out tuning/results/tune_max_detour_ratio.csv
 
 # charts
 python plots.py success --csv results/coarse.csv --out figures/success_full.png
 python plots.py success --csv results/dense.csv --out figures/success_dense.png
 python plots.py outcomes --csv results/coarse.csv --out figures/outcomes.png
 python plots.py head2head --csv results/dense.csv --out figures/bot4_vs_bot3.png
-python plots.py tuning --csv results/tune_risk_weight.csv --out figures/tune_risk_weight.png   # same for the other 3
+python plots.py tuning --csv tuning/results/tune_risk_weight.csv --out tuning/figures/tune_risk_weight.png   # same for the other 3
 python plots.py riskmap --out figures/risk_map.png
 python plots.py examples --csv results/dense.csv --out figures/examples
 ```

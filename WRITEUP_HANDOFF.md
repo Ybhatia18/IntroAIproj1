@@ -2,13 +2,13 @@
 
 ## Your job
 
-Help a two-person group (Person A and Person B) write the PDF writeup for Rutgers CS 440 (01:198:440) Fall 2026, Project 1. The code and experiments are finished. Everything you need is in this document and the `figures/` and `results/` folders of the repo.
+Help a two-person group (Person A and Person B) write the PDF writeup for Rutgers CS 440 (01:198:440) Fall 2026, Project 1. The code and experiments are finished. Everything you need is in this document and the `figures/`, `results/` and `tuning/` folders of the repo.
 
 The writeup is graded largely on **communicating ideas and results clearly**. The professor's words: "a significant part of your grade will be based on your ability to communicate your ideas and results."
 
 ## Hard rules
 
-1. **Do not invent numbers.** Every number in the writeup must come from this document or from the CSVs in `results/`. If something is missing (for example the Bot 4 tuning results), leave a visible placeholder like `[TODO: tuning results]`. Do not estimate or fill it in.
+1. **Do not invent numbers.** Every number in the writeup must come from this document or from the CSVs in `results/` and `tuning/results/`. If something is missing, leave a visible placeholder like `[TODO]`. Do not estimate or fill it in.
 2. **Follow the assignment's rules exactly** (section 2 below). Don't describe the simulation differently from how it works.
 3. **Do not include the bonus** (designing a ship layout deliberately). The group chose not to do it. Don't mention it.
 4. **Mark who wrote what.** The assignment requires the writeup to "clearly indicate what each person worked on", with shared responsibility for both code and writeup. Use the split in section 9.
@@ -289,18 +289,63 @@ Bot 1's 0.20% "gave up" in the dense sweep are trials where the only route to th
 - The fire started at least as close in **2,163 of 4,200** coarse setups (51.5%). At q = 1 every bot's success rate is **0.485 = 1 − 2163/4200**, exactly the share of setups where the bot started strictly closer. This confirms the assignment's note that at high q "the problem really reduces to whether or not the bot started closer to the button than the fire".
 - In the dense sweep it was 16,224 of 32,000 (50.7%).
 
-### Bot 4 tuning — NOT RUN YET
+### Bot 4 tuning (`tuning/results/tune_*.csv`, `tuning/figures/tune_*.png`)
 
-The commands are in `TASKS.md`:
+**Setup:**
+- One setting is varied at a time; the other three stay at their defaults.
+- q = 0.1, 0.2, …, 0.6, with 500 paired setups per q (the same trials 0–499 as the main sweeps).
+- That's 3,000 Bot 4 runs per value.
 
-| Owner | Settings |
+| Owner | Setting | Values tried |
+|---|---|---|
+| Person A | `risk_weight` | 5, 15, **30**, 60 |
+| Person A | `horizon` | 5, 10, **20**, 40 |
+| Person B | `fein_margin` | 0, **0.02**, 0.05, 0.1 |
+| Person B | `max_detour_ratio` | 1.5, **2**, 3, 5 |
+
+Defaults are in bold.
+
+**Overall success rate per value** (all 3,000 runs):
+
+| Setting | Values → success |
 |---|---|
-| Person A | `risk_weight` (5, 15, 30, 60) and `horizon` (5, 10, 20, 40) |
-| Person B | `fein_margin` (0, 0.02, 0.05, 0.1) and `max_detour_ratio` (1.5, 2, 3, 5) |
+| `risk_weight` | 5 → 0.8407, 15 → 0.8397, **30 → 0.8400**, 60 → 0.8387 |
+| `horizon` | 5 → 0.8413, 10 → 0.8417, **20 → 0.8400**, 40 → 0.8383 |
+| `fein_margin` | 0 → 0.8420, **0.02 → 0.8400**, 0.05 → 0.8397, 0.1 → 0.8397 |
+| `max_detour_ratio` | 1.5 → 0.8403, **2 → 0.8400**, 3 → 0.8383, 5 → 0.8377 |
 
-All of them use q = 0.1 to 0.6 and 500 trials. Leave `[TODO]` placeholders until the group provides those CSVs and charts. **Do not make up tuning results.**
+**Paired comparison against the default** (same setups; "a vs b" = trials only the new value won vs. trials only the default won):
 
-## 7. Figures (all in `figures/`)
+| Setting | Value | a vs b | χ² |
+|---|---|---|---|
+| `risk_weight` | 5 | 10 vs 8 | 0.1 |
+| `risk_weight` | 15 | 2 vs 3 | 0.0 |
+| `risk_weight` | 60 | 0 vs 4 | 2.2 |
+| `horizon` | 5 | 23 vs 19 | 0.2 |
+| `horizon` | 10 | 18 vs 13 | 0.5 |
+| `horizon` | 40 | 13 vs 18 | 0.5 |
+| `fein_margin` | 0 | 7 vs 1 | 3.1 |
+| `fein_margin` | 0.05 | 0 vs 1 | 0.0 |
+| `fein_margin` | 0.1 | 0 vs 1 | 0.0 |
+| `max_detour_ratio` | 1.5 | 5 vs 4 | 0.0 |
+| `max_detour_ratio` | 3 | 0 vs 5 | 3.2 |
+| `max_detour_ratio` | 5 | 0 vs 7 | 5.1 (p ≈ 0.02) |
+
+**What this means (state these conclusions; don't overclaim):**
+- **Bot 4 is insensitive to all four settings in these ranges.**
+  - Every value lands within 0.4 percentage points of the default overall.
+  - Changing a setting changes the outcome in at most about 1.4% of trials (42 of 3,000 at most).
+- Only one comparison is borderline significant: a *looser* detour limit (`max_detour_ratio` = 5) is slightly worse than 2. That fits the idea that long detours give the button time to burn.
+- `fein_margin` = 0 (go FE!N only when careful is no better at all) is slightly better than 0.02, but not significantly (p ≈ 0.08).
+- **Interpretation:** most of Bot 4's advantage comes from the *structure* of the algorithm, not the exact numbers:
+  - risk predicted at the time the bot would arrive
+  - the button's own risk included
+  - a switch to running when detours stop paying off
+- Most trials are decided by geometry: whether the bot starts closer to the button than the fire (see the key observation above). Only a small share of trials has a real careful-vs.-rush decision for these settings to affect.
+- A small trend worth one sentence, with the caveat that it's small: a longer `horizon` raised "bot burned" (1.33% at horizon 5 → 2.17% at 40) and lowered "button burned" (7.13% → 6.57%).
+- **The group kept the defaults** (no setting was clearly better). Optionally, mention `fein_margin = 0` and `max_detour_ratio = 1.5–2` as the slightly better region.
+
+## 7. Figures (in `figures/`, tuning charts in `tuning/figures/`)
 
 | File | What it shows | Use in |
 |---|---|---|
@@ -312,6 +357,8 @@ All of them use q = 0.1 to 0.6 and 500 trials. Leave `[TODO]` placeholders until
 | `examples/bot1_vs_bot2_*.png` | Same setup: Bot 1 failed, Bot 2 succeeded | Q3 |
 | `examples/bot3_vs_bot4_*.png` | Same setup: Bot 3 failed, Bot 4 succeeded | Q3 |
 | `examples/bot4_vs_bot3_*.png` | Same setup: Bot 4 failed, Bot 3 succeeded | Q3 (shows Bot 4's weakness honestly) |
+| `tuning/figures/tune_risk_weight.png`, `tuning/figures/tune_horizon.png` | Bot 4 success vs. q for each value (Person A's settings); lines nearly overlap | Q1 |
+| `tuning/figures/tune_fein_margin.png`, `tuning/figures/tune_max_detour_ratio.png` | Same, for Person B's settings | Q1 |
 
 Each example image's title gives the bot, outcome, time, q and trial number. In those images:
 - orange = fire
